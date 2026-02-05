@@ -319,18 +319,37 @@ function render(){
   el.frontLang.textContent = langLabel(p.frontLang);
   el.frontWord.textContent = p.front;
 
-  const pool = currentList.map(x => pair(x).back).filter(Boolean);
-  const opts = [p.back].filter(Boolean);
-  while(opts.length<4 && pool.length){
-    const r = pool[Math.floor(Math.random()*pool.length)];
-    if(r && !opts.includes(r)) opts.push(r);
+  // Optionen: wenn die Loesung Thai ist, zeige auch Umschrift (roman)
+  const isThaiAnswer = (p.backLang === "Thai");
+  const candidates = currentList.map(x => {
+    const px = pair(x);
+    return { val: px.back, roman: (px.backLang==="Thai" ? (px.backExtra||"") : ""), lang: px.backLang };
+  }).filter(c => c.lang === p.backLang && (c.val||"").trim() !== "");
+
+  const opts = [{ val: p.back, roman: isThaiAnswer ? (p.backExtra||"") : "" }];
+
+  while(opts.length < 4 && candidates.length){
+    const r = candidates[Math.floor(Math.random() * candidates.length)];
+    if(!opts.some(o => o.val === r.val)){
+      opts.push({ val: r.val, roman: r.roman || "" });
+    }
   }
-  opts.sort(()=>Math.random()-0.5);
-  mcAnswer = p.back;
+
+  // Shuffle
+  opts.sort(() => Math.random() - 0.5);
+
+  mcAnswer = { val: p.back, roman: isThaiAnswer ? (p.backExtra||"") : "" };
 
   el.sub.innerHTML = opts.map(o => {
-    const safe = escapeHtml(o);
-    return `<button class="mcBtn" onclick="window.__pickMC('${safe}')">${safe}</button>`;
+    const v = escapeHtml(o.val);
+    const ro = escapeHtml(o.roman || "");
+    if(isThaiAnswer && ro){
+      return `<button class="mcBtn" data-val="${v}">
+        <div style="font-size:20px; font-weight:700;">${v}</div>
+        <div style="font-size:13px; opacity:.7; margin-top:2px;">${uiLang==="th" ? "คำอ่าน: " : "Umschrift: "}${ro}</div>
+      </button>`;
+    }
+    return `<button class="mcBtn" data-val="${v}">${v}</button>`;
   }).join("");
 }
 
@@ -381,15 +400,19 @@ function next(){
   pickNext(true);
 }
 
-window.__pickMC = (valEscaped) => {
-  // valEscaped is already escaped; compare to escaped correct
-  const ok = escapeHtml(mcAnswer) === valEscaped;
+// Multiple-Choice Klick-Handling
+el.sub.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-val]");
+  if(!btn) return;
+  const chosen = btn.getAttribute("data-val") || "";
+  const ok = escapeHtml(mcAnswer?.val || "") === chosen;
+
   if(ok){
     grade("good");
   } else {
     grade("again");
   }
-};
+});
 
 // ---------- Speech ----------
 function speak(text, lang){
