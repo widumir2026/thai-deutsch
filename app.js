@@ -15,6 +15,7 @@ const K_UI_LANG = "thai_cards_ui_lang";
 const K_CUSTOM_WORDS = "thai_cards_custom_words_v1";
 const K_PROGRESS = "thai_cards_progress_v1";
 const K_ACTIVE_DECK = "thai_cards_active_deck_v1";
+const K_MC_STATS = "thai_cards_mc_stats_v1";
 
 let uiLang = localStorage.getItem(K_UI_LANG) || "de";
 
@@ -123,6 +124,24 @@ function parseCsv(text){
 // ---------- Progress (Spaced Repetition) ----------
 // box: 0..5, nextDue: timestamp
 let progress = safeJsonParse(localStorage.getItem(K_PROGRESS), {});
+
+let mcStats = safeJsonParse(localStorage.getItem(K_MC_STATS), {});
+
+function getMcStats(deckKey){
+  if(!mcStats[deckKey]) mcStats[deckKey] = { correct: 0, total: 0 };
+  return mcStats[deckKey];
+}
+function saveMcStats(){
+  localStorage.setItem(K_MC_STATS, JSON.stringify(mcStats));
+}
+function resetMcStats(deckKey=null){
+  if(deckKey){
+    mcStats[deckKey] = { correct: 0, total: 0 };
+  } else {
+    mcStats = {};
+  }
+  saveMcStats();
+}
 
 // wordId: stable hash of content
 function wordId(w){
@@ -251,7 +270,12 @@ function updateTop(){
   el.netPill.textContent = navigator.onLine ? (uiLang==="th" ? "ออนไลน์" : "online") : (uiLang==="th" ? "ออฟไลน์" : "offline");
 
   const due = countDue(currentList);
-  el.statsPill.textContent = (uiLang==="th" ? "พร้อม" : "fällig") + ": " + due + " / " + currentList.length;
+  const base = (uiLang==="th" ? "พร้อม" : "fällig") + ": " + due + " / " + currentList.length;
+
+  const s = getMcStats(activeDeck);
+  const mcPart = (uiLang==="th" ? " | MC ถูก: " : " | MC richtig: ") + s.correct + " / " + s.total;
+
+  el.statsPill.textContent = base + mcPart;
 
   el.deckInfo.textContent = activeDeck + " (" + currentList.length + ")";
 }
@@ -351,6 +375,7 @@ function render(){
     }
     return `<button class="mcBtn" data-val="${v}">${v}</button>`;
   }).join("");
+  mcLocked = false;
 }
 
 function escapeHtml(s){
@@ -400,62 +425,57 @@ function next(){
   pickNext(true);
 }
 
-// Multiple-Choice Klick-Handling
+// Multiple-Choice Klick-Handling (mit Feedback + Statistik)
+let mcLocked = false;
+
 el.sub.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-val]");
   if(!btn) return;
+  if(el.train.value !== "mc") return;
+  if(mcLocked) return;
+
+  mcLocked = true;
+
+  const buttons = Array.from(el.sub.querySelectorAll("button[data-val]"));
+  buttons.forEach(b => b.disabled = true);
+
   const chosen = btn.getAttribute("data-val") || "";
-  const ok = escapeHtml(mcAnswer?.val || "") === chosen;
+  const correctEsc = escapeHtml(mcAnswer?.val || "");
+  const ok = (correctEsc === chosen);
 
-  if(ok){
-    grade("good");
-  } else {
-    grade("again");
-  }
-});
+  // Statistik
+  const st = getMcStats(activeDeck);
+  st.total += 1;
+  if(ok) st.correct += 1;
+  saveMcStats();
+  updateTop();
 
-// ---------- Speech ----------
-function speak(text, lang){
-  if(!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  if(lang==="th") u.lang="th-TH";
-  if(lang==="en") u.lang="en-US";
-  if(lang==="de") u.lang="de-DE";
-  window.speechSynthesis.speak(u);
-}
+  // Feedback Farben
+  const green = "#047857";
+  const red = "#b91c1c";
 
-function currentTexts(){
-  if(!current) return null;
-  const p = pair(current);
-  const frontText = (el.train.value==="cards") ? (flipped ? p.back : p.front) : p.front;
-  const backText  = (el.train.value==="cards") ? (flipped ? p.front : p.back) : p.back;
-  const frontLang = (el.train.value==="cards") ? (flipped ? p.backLang : p.frontLang) : p.frontLang;
-  const backLang  = (el.train.value==="cards") ? (flipped ? p.frontLang : p.backLang) : p.backLang;
-  return { frontText, backText, frontLang, backLang };
-}
+  btn.style.background = ok ? green : red;
+  btn.style.borderColor = ok ? green : red;
+  btn.style.color = "#fff";
 
-// ---------- CSV Import/Export ----------
-el.csvFile.addEventListener("change", e => {
-  const file = e.target.files[0];
-  if(!file) return;
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    try{
-      const list = parseCsv(reader.result);
-      if(!list.length) throw new Error("empty");
-      decks.custom = list;
-      saveCustomToStorage();
-      setDeck("custom");
-      toast(list.length + " " + t("msg_import_ok"));
-      bumpCacheAndReloadHint();
-    }catch(err){
-      toast(t("msg_import_fail"));
-      console.error(err);
+  if(!ok){
+    const correctBtn = buttons.find(b => (b.getAttribute("data-val") || "") === correctEsc);
+    if(correctBtn){
+      correctBtn.style.background = green;
+      correctBtn.style.borderColor = green;
+      correctBtn.style.color = "#fff";
     }
-  };
-  reader.readAsText(file, "utf-8");
+  }
+
+  // Nach kurzer Anzeige automatisch weiter (und SR bewerten)
+  setTimeout(() => {
+    mcLocked = false;
+    if(ok){
+      grade("good");
+    } else {
+      grade("again");
+    }
+  }, 900);
 });
 
 function exportCsv(list){
@@ -493,6 +513,7 @@ el.clearCustom.addEventListener("click", ()=>{
 el.resetProgress.addEventListener("click", ()=>{
   progress = {};
   saveProgress();
+  resetMcStats(activeDeck);
   toast(t("msg_progress_cleared"));
   updateTop();
 });
