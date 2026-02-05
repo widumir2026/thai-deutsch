@@ -1,6 +1,12 @@
+
+// ===============================
+// Thai Lernkarten – Layout + CSV Import + UI Sprache Umschalter
+// ===============================
+
 const STORAGE_UI_LANG = "thai_cards_ui_lang";
 let uiLang = localStorage.getItem(STORAGE_UI_LANG) || "de";
 
+// ---------- i18n ----------
 const I18N = {
   app_title: { de: "Thai Lernkarten", th: "บัตรคำภาษาไทย" },
 
@@ -17,32 +23,15 @@ const I18N = {
   btn_hard: { de: "Schwer", th: "ยาก" },
   btn_good: { de: "Gekonnt", th: "รู้แล้ว" },
   btn_next: { de: "Nächste", th: "ถัดไป" },
-  btn_audio_front: { de: "Audio vorne", th: "เสียงหน้า" },
-  btn_audio_back: { de: "Audio hinten", th: "เสียงหลัง" },
   btn_reset: { de: "Reset Lernen", th: "เริ่มใหม่" },
 
-  hint_tap: { de: "Tippen zum Umdrehen", th: "แตะเพื่อพลิก" },
-
-  panel_words_title: { de: "Wortliste", th: "รายการคำ" },
-  csv_hint: {
-    de: "CSV Import: Spalten th, roman, en, de (cat optional). UTF-8.",
-    th: "นำเข้า CSV: คอลัมน์ th, roman, en, de (cat ไม่บังคับ). UTF-8."
-  },
-  btn_export_csv: { de: "Export CSV", th: "ส่งออก CSV" },
-  btn_clear_words: { de: "Wortliste löschen", th: "ลบรายการคำ" },
-
-  panel_pwa_title: { de: "Installieren (PWA)", th: "ติดตั้ง (PWA)" },
-  pwa_hint: {
-    de: "iPhone: Safari → Teilen → „Zum Home-Bildschirm“. Android/Chrome: „Installieren“. Offline nach erstem Laden.",
-    th: "iPhone: Safari → แชร์ → „เพิ่มไปยังหน้าจอโฮม“. Android/Chrome: „ติดตั้ง“. ออฟไลน์หลังโหลดครั้งแรก."
-  },
-  pwa_status_label: { de: "Status:", th: "สถานะ:" }
+  imported: { de: "Wörter importiert", th: "นำเข้าคำแล้ว" }
 };
 
 function t(key){
   const x = I18N[key];
   if(!x) return key;
-  return (uiLang==="th") ? x.th : x.de;
+  return uiLang === "th" ? x.th : x.de;
 }
 
 function applyI18n(){
@@ -54,97 +43,69 @@ function applyI18n(){
   });
 }
 
+// ---------- Demo Wörter (werden durch CSV ersetzt) ----------
 const words = [
   { th:"สวัสดี", roman:"sawatdee", en:"hello", de:"hallo" },
-  { th:"ขอบคุณ", roman:"khop khun", en:"thank you", de:"danke" },
-  { th:"ไป", roman:"bpai", en:"go", de:"gehen" },
-  { th:"กิน", roman:"gin", en:"eat", de:"essen" },
-  { th:"น้ำ", roman:"nam", en:"water", de:"wasser" },
+  { th:"ขอบคุณ", roman:"khop khun", en:"thank you", de:"danke" }
 ];
 
 let idx = 0;
 let flipped = false;
 let mcAnswer = null;
 
+// ---------- DOM ----------
 const el = {
   uiLang: document.getElementById("uiLang"),
   mode: document.getElementById("mode"),
   train: document.getElementById("train"),
-  stats: document.getElementById("stats"),
-  net: document.getElementById("net"),
   card: document.getElementById("card"),
   frontLang: document.getElementById("frontLang"),
   frontWord: document.getElementById("frontWord"),
   sub: document.getElementById("sub"),
-  pwaStatus: document.getElementById("pwaStatus"),
   flip: document.getElementById("flip"),
-  again: document.getElementById("again"),
-  hard: document.getElementById("hard"),
-  good: document.getElementById("good"),
   next: document.getElementById("next"),
-  speakFront: document.getElementById("speakFront"),
-  speakBack: document.getElementById("speakBack"),
   reset: document.getElementById("reset"),
-  exportCsv: document.getElementById("exportCsv"),
-  clearWords: document.getElementById("clearWords"),
+  csvFile: document.getElementById("csvFile")
 };
 
+// ---------- Logik ----------
 function pair(w){
   const m = el.mode.value;
-  if(m==="th-en") return { frontLang:"Thai", front:w.th, frontExtra:(w.roman||""), backLang:"Englisch", back:w.en };
-  if(m==="th-de") return { frontLang:"Thai", front:w.th, frontExtra:(w.roman||""), backLang:"Deutsch", back:w.de };
-  if(m==="en-th") return { frontLang:"Englisch", front:w.en, frontExtra:"", backLang:"Thai", back:w.th, backExtra:(w.roman||"") };
-  return { frontLang:"Deutsch", front:w.de, frontExtra:"", backLang:"Thai", back:w.th, backExtra:(w.roman||"") };
-}
-
-function langLabel(name){
-  if(uiLang==="th"){
-    if(name==="Thai") return "ไทย";
-    if(name==="Deutsch") return "เยอรมัน";
-    if(name==="Englisch") return "อังกฤษ";
-  }
-  return name;
+  if(m==="th-en") return [w.th, w.en];
+  if(m==="th-de") return [w.th, w.de];
+  if(m==="en-th") return [w.en, w.th];
+  return [w.de, w.th];
 }
 
 function render(){
-  const w = words[idx];
-  const p = pair(w);
+  if(words.length===0) return;
 
-  el.net.textContent = navigator.onLine ? (uiLang==="th" ? "ออนไลน์" : "online") : (uiLang==="th" ? "ออฟไลน์" : "offline");
-  el.stats.textContent = (uiLang==="th" ? "คำ" : "Wort") + " " + (idx+1) + "/" + words.length;
+  const [front, back] = pair(words[idx]);
 
   if(el.train.value==="cards"){
-    el.frontLang.textContent = flipped ? langLabel(p.backLang) : langLabel(p.frontLang);
-    el.frontWord.textContent = flipped ? p.back : p.front;
-
-    const extra = flipped ? (p.backExtra||"") : (p.frontExtra||"");
-    const whichLang = flipped ? p.backLang : p.frontLang;
-    el.sub.textContent = (extra && whichLang==="Thai") ? ((uiLang==="th" ? "คำอ่าน: " : "Umschrift: ") + extra) : "";
-    mcAnswer = null;
+    el.frontWord.textContent = flipped ? back : front;
+    el.sub.textContent = flipped ? "" : (words[idx].roman || "");
     return;
   }
 
+  // Multiple choice
   flipped = false;
-  el.frontLang.textContent = langLabel(p.frontLang);
-  el.frontWord.textContent = p.front;
+  el.frontWord.textContent = front;
 
-  const pool = words.map(x => pair(x).back);
-  const opts = [p.back];
-  while(opts.length<4){
+  const pool = words.map(w => pair(w)[1]);
+  const opts = [back];
+
+  while(opts.length<4 && pool.length>0){
     const r = pool[Math.floor(Math.random()*pool.length)];
     if(!opts.includes(r)) opts.push(r);
   }
+
   opts.sort(()=>Math.random()-0.5);
-  mcAnswer = p.back;
+  mcAnswer = back;
 
-  const btnHtml = opts.map(o => {
-    const safe = o.replaceAll('"','&quot;');
-    return `<div style="margin:8px 0; width:100%; max-width:760px;">
-      <button style="width:100%; text-align:left;" onclick="pickMC(\"${safe}\")">${o}</button>
-    </div>`;
-  }).join("");
-
-  el.sub.innerHTML = btnHtml;
+  el.sub.innerHTML = opts.map(o =>
+    `<button style="margin:6px 0;width:100%" onclick="pickMC('${o}')">${o}</button>`
+  ).join("");
 }
 
 function flip(){
@@ -159,98 +120,59 @@ function next(){
   render();
 }
 
-function pickMC(val){
-  const ok = (val === mcAnswer);
-  const msg = ok ? (uiLang==="th" ? "ถูกต้อง" : "Richtig") : (uiLang==="th" ? "ผิด" : "Falsch");
-  el.sub.insertAdjacentHTML("beforeend", `<div style="margin-top:10px; font-weight:700;">${msg}</div>`);
+function pickMC(v){
+  const ok = v === mcAnswer;
+  alert(ok ? "OK" : "Falsch");
+  next();
 }
 
-function resetLearning(){
-  idx = 0;
-  flipped = false;
-  render();
-}
+// ---------- CSV IMPORT (ECHT) ----------
+el.csvFile?.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if(!file) return;
 
-function speak(text, lang){
-  if(!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  if(lang==="th") u.lang="th-TH";
-  if(lang==="en") u.lang="en-US";
-  if(lang==="de") u.lang="de-DE";
-  window.speechSynthesis.speak(u);
-}
+  const reader = new FileReader();
 
-function currentTexts(){
-  const w = words[idx];
-  const p = pair(w);
-  const frontText = (el.train.value==="cards") ? (flipped ? p.back : p.front) : p.front;
-  const backText = (el.train.value==="cards") ? (flipped ? p.front : p.back) : p.back;
-  const frontLang = (el.train.value==="cards") ? (flipped ? p.backLang : p.frontLang) : p.frontLang;
-  const backLang = (el.train.value==="cards") ? (flipped ? p.frontLang : p.backLang) : p.backLang;
-  return { frontText, backText, frontLang, backLang };
-}
+  reader.onload = () => {
+    const text = reader.result;
 
-function initPwaStatus(){
-  if(!("serviceWorker" in navigator)){
-    el.pwaStatus.textContent = uiLang==="th" ? "ไม่รองรับ" : "nicht verfügbar";
-    return;
-  }
-  el.pwaStatus.textContent = uiLang==="th" ? "ใช้งาน" : "aktiv";
-}
+    const rows = text.split(/\r?\n/).filter(r => r.trim());
+    if(rows.length <= 1) return;
 
-function exportCsv(){
-  const rows = [["th","roman","en","de"]].concat(words.map(w=>[w.th,w.roman||"",w.en||"",w.de||""]));
-  const csv = rows.map(r=>r.map(v=>{
-    const s = (v??"").toString();
-    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
-  }).join(",")).join("\n");
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href=url; a.download="thai_cards.csv";
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-}
+    words.length = 0; // alte Wörter löschen
 
-el.uiLang.value = uiLang;
-el.uiLang.addEventListener("change", ()=>{
+    for(const row of rows.slice(1)){
+      const cols = row.split(",");
+
+      words.push({
+        th: cols[0] || "",
+        roman: cols[1] || "",
+        en: cols[2] || "",
+        de: cols[3] || ""
+      });
+    }
+
+    idx = 0;
+    flipped = false;
+
+    alert(words.length + " " + t("imported"));
+    render();
+  };
+
+  reader.readAsText(file, "utf-8");
+});
+
+// ---------- Events ----------
+el.flip?.addEventListener("click", flip);
+el.next?.addEventListener("click", next);
+el.reset?.addEventListener("click", ()=>{ idx=0; render(); });
+
+el.uiLang?.addEventListener("change", ()=>{
   uiLang = el.uiLang.value;
   localStorage.setItem(STORAGE_UI_LANG, uiLang);
   applyI18n();
-  initPwaStatus();
-  render();
 });
 
-el.mode.addEventListener("change", ()=>{ flipped=false; render(); });
-el.train.addEventListener("change", ()=>{ flipped=false; render(); });
-
-el.card.addEventListener("click", ()=>{ if(el.train.value==="cards") flip(); });
-
-el.flip.addEventListener("click", flip);
-el.next.addEventListener("click", next);
-el.reset.addEventListener("click", resetLearning);
-
-el.again.addEventListener("click", next);
-el.hard.addEventListener("click", next);
-el.good.addEventListener("click", next);
-
-el.speakFront.addEventListener("click", ()=>{
-  const x=currentTexts();
-  const lc = (x.frontLang==="Thai")?"th":(x.frontLang==="Englisch")?"en":"de";
-  speak(x.frontText, lc);
-});
-el.speakBack.addEventListener("click", ()=>{
-  const x=currentTexts();
-  const lc = (x.backLang==="Thai")?"th":(x.backLang==="Englisch")?"en":"de";
-  speak(x.backText, lc);
-});
-
-el.exportCsv.addEventListener("click", exportCsv);
-el.clearWords.addEventListener("click", ()=>{
-  alert(uiLang==="th" ? "ยังไม่รองรับ" : "Noch nicht implementiert.");
-});
-
+// ---------- Init ----------
 applyI18n();
-initPwaStatus();
 render();
