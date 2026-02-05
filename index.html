@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thai Lernkarten</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+body{font-family:system-ui;margin:0;background:#f6f7f9}
+.wrap{max-width:900px;margin:auto;padding:16px}
+.card{background:#fff;border-radius:18px;padding:60px 20px;text-align:center;font-size:42px;border:1px solid #ddd;cursor:pointer}
+.small{font-size:20px;color:#666;margin-top:8px}
+.btns{margin-top:16px;display:flex;gap:10px}
+button{padding:12px 16px;border-radius:12px;border:1px solid #ddd;background:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h2>Thai Lernkarten</h2>
+<select id="mode">
+<option value="th-en">Thai → Englisch</option>
+<option value="th-de">Thai → Deutsch</option>
+<option value="en-th">Englisch → Thai</option>
+<option value="de-th">Deutsch → Thai</option>
+</select>
+<select id="train">
+<option value="cards">Kartenmodus</option>
+<option value="mc">Multiple Choice</option>
+</select>
+<div id="card" class="card">Start</div>
+<div id="sub" class="small"></div>
+<div class="btns">
+<button onclick="flip()">Umdrehen</button>
+<button onclick="next()">Naechste</button>
+</div>
+</div>
+<script src="app.js"></script>
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js');}
+</script>
+</body>
+</html>
