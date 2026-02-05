@@ -1,0 +1,201 @@
+th,roman,en,de,cat
+สวัสดี,sawatdee,hello,hallo,Basics
+ลาก่อน,laa kon,goodbye,tschüss,Basics
+ขอบคุณ,khop khun,thank you,danke,Basics
+ขอโทษ,kho thot,sorry,entschuldigung,Basics
+ไม่เป็นไร,mai pen rai,no problem,macht nichts,Basics
+ใช่,chai,yes,ja,Basics
+ไม่,mai,no,nein,Basics
+ได้,dai,can,kann,Basics
+ไม่ได้,mai dai,cannot,kann nicht,Basics
+ช่วย,chuay,help,helfen,Basics
+กรุณา,karuna,please,bitte,Basics
+โอเค,ok,okay,ok,Basics
+ดี,dee,good,gut,Basics
+แย่,yae,bad,schlecht,Basics
+ถูก,thuk,correct,richtig,Basics
+ผิด,phit,wrong,falsch,Basics
+เข้าใจ,khao jai,understand,verstehen,Basics
+ไม่เข้าใจ,mai khao jai,don't understand,ich verstehe nicht,Basics
+พูดช้าๆ,phut chaa chaa,speak slowly,bitte langsam sprechen,Basics
+อีกครั้ง,iik khrang,again,nochmals,Basics
+ชื่อ,chue,name,name,Basics
+คุณชื่ออะไร,khun chue arai,what is your name,wie heisst du,Basics
+ฉันชื่อ...,chan chue ...,my name is...,ich heisse...,Basics
+ยินดีที่ได้รู้จัก,yin dee thii dai ruu jak,nice to meet you,freut mich,Basics
+ฉัน,chan,I,ich,People
+ผม,phom,I (male),ich (m),People
+คุณ,khun,you,du/Sie,People
+เขา,khao,he/she,er/sie,People
+เรา,rao,we,wir,People
+เพื่อน,phuean,friend,Freund/Freundin,People
+คน,khon,person,Person,People
+เด็ก,dek,child,Kind,People
+ผู้ชาย,phu chai,man,Mann,People
+ผู้หญิง,phu ying,woman,Frau,People
+ครอบครัว,khrop khrua,family,Familie,Family
+พ่อ,pho,father,Vater,Family
+แม่,mae,mother,Mutter,Family
+พี่,phii,older sibling,älteres Geschwister,Family
+น้อง,nong,younger sibling,jüngeres Geschwister,Family
+ลูก,luuk,child (son/daughter),Kind,Family
+สามี,sami,husband,Ehemann,Family
+ภรรยา,phanya,wife,Ehefrau,Family
+ศูนย์,sun,zero,null,Numbers
+หนึ่ง,nueng,one,eins,Numbers
+สอง,song,two,zwei,Numbers
+สาม,sam,three,drei,Numbers
+สี่,si,four,vier,Numbers
+ห้า,ha,five,fünf,Numbers
+หก,hok,six,sechs,Numbers
+เจ็ด,chet,seven,sieben,Numbers
+แปด,paet,eight,acht,Numbers
+เก้า,kao,nine,neun,Numbers
+สิบ,sip,ten,zehn,Numbers
+วันนี้,wan nii,today,heute,Time
+พรุ่งนี้,phrung nii,tomorrow,morgen,Time
+เมื่อวาน,muea wan,yesterday,gestern,Time
+ตอนนี้,ton nii,now,jetzt,Time
+เช้า,chao,morning,Morgen,Time
+บ่าย,bai,afternoon,Nachmittag,Time
+เย็น,yen,evening,Abend,Time
+กลางคืน,klang khuen,night,Nacht,Time
+วัน,wan,day,Tag,Time
+สัปดาห์,sapdaa,week,Woche,Time
+เดือน,duean,month,Monat,Time
+ปี,pii,year,Jahr,Time
+ไป,bpai,go,gehen,Verbs
+มา,maa,come,kommen,Verbs
+อยู่,yuu,stay/live,wohnen,Verbs
+มี,mii,have,haben,Verbs
+ทำ,tham,do/make,machen,Verbs
+กิน,gin,eat,essen,Verbs
+ดื่ม,duem,drink,trinken,Verbs
+นอน,non,sleep,schlafen,Verbs
+ตื่น,tuen,wake up,aufwachen,Verbs
+ทำงาน,tham ngaan,work,arbeiten,Verbs
+เรียน,rian,learn/study,lernen,Verbs
+พูด,phut,speak,sprechen,Verbs
+ฟัง,fang,listen,zuhören,Verbs
+อ่าน,aan,read,lesen,Verbs
+เขียน,khian,write,schreiben,Verbs
+ดู,duu,see/watch,sehen,Verbs
+ซื้อ,sue,buy,kaufen,Verbs
+ขาย,khai,sell,verkaufen,Verbs
+จ่าย,jai,pay,bezahlen,Verbs
+เดิน,doen,walk,laufen,Verbs
+วิ่ง,wing,run,rennen,Verbs
+นั่ง,nang,sit,sitzen,Verbs
+ยืน,yuen,stand,stehen,Verbs
+เปิด,poet,open/turn on,öffnen/einschalten,Verbs
+ปิด,pit,close/turn off,schliessen/ausschalten,Verbs
+รอ,ro,wait,warten,Verbs
+ถาม,tham,ask,fragen,Verbs
+ตอบ,top,answer,antworten,Verbs
+โทร,tho,call,anrufen,Verbs
+ชอบ,chop,like,mögen,Verbs
+รัก,rak,love,lieben,Verbs
+ต้องการ,tong kan,want/need,wollen/brauchen,Verbs
+อะไร,arai,what,was,Phrases
+ที่ไหน,thii nai,where,wo,Phrases
+เมื่อไหร่,muea rai,when,wann,Phrases
+ทำไม,tham mai,why,warum,Phrases
+อย่างไร,yang rai,how,wie,Phrases
+เท่าไหร่,thao rai,how much,wie viel,Phrases
+กี่,kii,how many,wie viele,Phrases
+ขอ,kho,please (request),bitte,Phrases
+ขอน้ำ,kho nam,"water, please",Wasser bitte,Phrases
+ขอเมนู,kho menu,"menu, please",Menü bitte,Phrases
+ขอบิล,kho bin,"bill, please",Rechnung bitte,Phrases
+ห้องน้ำอยู่ที่ไหน,hong nam yuu thii nai,where is the toilet,wo ist die Toilette,Phrases
+ราคาเท่าไหร่,rakhaa thao rai,how much is it,wie viel kostet das,Phrases
+ซ้าย,sai,left,links,Directions
+ขวา,khwa,right,rechts,Directions
+ตรงไป,trong bpai,straight ahead,geradeaus,Directions
+กลับ,klap,back/return,zurück,Directions
+ใกล้,klai,near,nah,Directions
+ไกล,glai,far,weit,Directions
+ข้างหน้า,khang naa,in front,vorne,Directions
+ข้างหลัง,khang lang,behind,hinten,Directions
+ข้างๆ,khang khang,next to,neben,Directions
+บ้าน,baan,home/house,Zuhause/Haus,Travel
+ห้อง,hong,room,Zimmer,Travel
+โรงแรม,rongraem,hotel,Hotel,Travel
+สนามบิน,sanam bin,airport,Flughafen,Travel
+สถานีรถไฟ,sathanii rotfai,train station,Bahnhof,Travel
+ป้ายรถเมล์,pai rot mae,bus stop,Bushaltestelle,Travel
+ถนน,thanon,street,Strasse,Travel
+เมือง,mueang,city,Stadt,Travel
+ตลาด,talat,market,Markt,Travel
+ร้าน,raan,shop,Laden,Travel
+ร้านอาหาร,raan ahaan,restaurant,Restaurant,Travel
+ร้านกาแฟ,raan kaafae,cafe,Café,Travel
+ธนาคาร,thanakhan,bank,Bank,Travel
+โรงพยาบาล,rongphayaban,hospital,Spital,Travel
+ร้านขายยา,raan khai yaa,pharmacy,Apotheke,Travel
+ห้องน้ำ,hong nam,toilet,Toilette,Travel
+วัด,wat,temple,Tempel,Travel
+ชายหาด,chai hat,beach,Strand,Travel
+ภูเขา,phu khao,mountain,Berg,Travel
+สวน,suan,park/garden,Park/Garten,Travel
+น้ำ,nam,water,Wasser,Food
+ชา,chaa,tea,Tee,Food
+กาแฟ,kaafae,coffee,Kaffee,Food
+นม,nom,milk,Milch,Food
+น้ำผลไม้,nam phonlamai,juice,Saft,Food
+ข้าว,khao,rice,Reis,Food
+ก๋วยเตี๋ยว,kuay tiao,noodles,Nudeln,Food
+ผัดไทย,phat thai,pad thai,Pad Thai,Food
+แกง,kaeng,curry,Curry,Food
+ไก่,kai,chicken,Huhn,Food
+หมู,muu,pork,Schwein,Food
+ปลา,plaa,fish,Fisch,Food
+ไข่,khai,egg,Ei,Food
+ผัก,phak,vegetables,Gemüse,Food
+ผลไม้,phonlamai,fruit,Obst,Food
+อร่อย,aroi,delicious,lecker,Food
+เผ็ด,phet,spicy,scharf,Food
+ไม่เผ็ด,mai phet,not spicy,nicht scharf,Food
+หวาน,waan,sweet,süss,Food
+เค็ม,khem,salty,salzig,Food
+เปรี้ยว,priao,sour,sauer,Food
+ใหญ่,yai,big,gross,Adjectives
+เล็ก,lek,small,klein,Adjectives
+ใหม่,mai,new,neu,Adjectives
+เก่า,kao,old,alt,Adjectives
+ร้อน,ron,hot,heiss,Adjectives
+เย็น,yen,cold/cool,kalt/kühl,Adjectives
+เร็ว,reo,fast,schnell,Adjectives
+ช้า,cha,slow,langsam,Adjectives
+แพง,phaeng,expensive,teuer,Adjectives
+ถูก,thuk,cheap,günstig,Adjectives
+สวย,suay,beautiful,schön,Adjectives
+เหนื่อย,nueai,tired,müde,Adjectives
+หิว,hiu,hungry,hungrig,Adjectives
+อิ่ม,im,full,satt,Adjectives
+ป่วย,puay,sick,krank,Adjectives
+เงิน,ngoen,money,Geld,Shopping
+ราคา,rakhaa,price,Preis,Shopping
+เงินสด,ngoen sot,cash,Bargeld,Shopping
+บัตรเครดิต,bat kredit,credit card,Kreditkarte,Shopping
+ใบเสร็จ,bai set,receipt,Quittung,Shopping
+ลดราคา,lot rakhaa,discount,Rabatt,Shopping
+โทรศัพท์,thorasap,phone,Telefon,Everyday
+อินเทอร์เน็ต,internet,internet,Internet,Everyday
+ไวไฟ,wifi,wifi,WLAN,Everyday
+ไฟ,fai,light,Licht,Everyday
+รถ,rot,car,Auto,Transport
+แท็กซี่,thaeksi,taxi,Taxi,Transport
+รถไฟ,rot fai,train,Zug,Transport
+รถเมล์,rot mae,bus,Bus,Transport
+มอเตอร์ไซค์,motoesai,motorbike,Motorrad,Transport
+ตั๋ว,tua,ticket,Ticket,Transport
+กุญแจ,kunjae,key,Schlüssel,Everyday
+ประตู,pratuu,door,Tür,Everyday
+หน้าต่าง,naa taang,window,Fenster,Everyday
+โต๊ะ,to,table,Tisch,Home
+เก้าอี้,kao ii,chair,Stuhl,Home
+เตียง,tiang,bed,Bett,Home
+เสื้อ,suea,shirt,Shirt,Clothes
+กางเกง,kang keng,pants,Hose,Clothes
+รองเท้า,rong thao,shoes,Schuhe,Clothes
