@@ -332,16 +332,20 @@ function render(){
 
     const extra = flipped ? (p.backExtra||"") : (p.frontExtra||"");
     const whichLang = flipped ? p.backLang : p.frontLang;
-    el.sub.textContent = (extra && whichLang==="Thai")
-      ? ((uiLang==="th" ? "คำอ่าน: " : "Umschrift: ") + extra)
-      : "";
-    return;
-  }
 
-  // Multiple choice
-  flipped = false;
-  el.frontLang.textContent = langLabel(p.frontLang);
+    if(whichLang === "Thai" && extra){
+      el.sub.textContent = (uiLang==="th" ? "คำอ่าน: " : "Umschrift: ") + extra;
+    } else {
+      el.sub.textContent = "";
+    }
   el.frontWord.textContent = p.front;
+
+// Umschrift IMMER anzeigen wenn Thai gefragt wird
+if(p.frontLang === "Thai" && p.frontExtra){
+  el.sub.innerHTML = '<div style="opacity:.7; font-size:15px; margin-top:6px;">' + (uiLang==="th" ? "คำอ่าน: " : "Umschrift: ") + p.frontExtra + '</div>';
+} else {
+  el.sub.innerHTML = "";
+}
 
   // Optionen: wenn die Loesung Thai ist, zeige auch Umschrift (roman)
   const isThaiAnswer = (p.backLang === "Thai");
