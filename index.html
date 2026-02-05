@@ -3,91 +3,253 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111827">
   <title>Thai Lernkarten</title>
+  <link rel="manifest" href="manifest.webmanifest">
 
   <style>
+    :root{
+      --bg:#f6f7f9;
+      --card:#ffffff;
+      --border:#e3e6ea;
+      --text:#111827;
+      --muted:#6b7280;
+
+      --btn:#ffffff;
+      --btnBorder:#d7dbe0;
+
+      --primary:#111827;
+      --danger:#b91c1c;
+      --warn:#b45309;
+      --good:#047857;
+    }
+    *{ box-sizing:border-box; }
     body{
-      font-family: system-ui, Arial, sans-serif;
       margin:0;
-      background:#f6f7f9;
-      padding:20px;
-      max-width:800px;
-      margin:auto;
+      font-family: system-ui, -apple-system, Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:16px;
+      padding-bottom:24px;
+    }
+    .top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .pill{
+      background:var(--card);
+      border:1px solid var(--border);
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:14px;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+      white-space:nowrap;
+    }
+    select{
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--btnBorder);
+      background:var(--card);
+      font-size:16px;
     }
 
+    .cardWrap{ margin-top:16px; }
     .card{
-      background:#fff;
-      border:1px solid #ddd;
-      border-radius:16px;
-      padding:60px 20px;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:18px;
+      min-height:320px;
+      padding:22px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
       text-align:center;
-      font-size:40px;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+      user-select:none;
       cursor:pointer;
-      margin-bottom:12px;
     }
-
-    .sub{
-      font-size:18px;
-      color:#666;
+    .lang{
+      font-size:14px;
+      opacity:.65;
+      letter-spacing:.02em;
+      margin-bottom:8px;
+    }
+    .word{
+      font-size:56px;
+      font-weight:800;
+      line-height:1.05;
+      margin:0;
+      word-break:break-word;
+    }
+    .extra{
       margin-top:10px;
-      min-height:30px;
+      font-size:16px;
+      color:var(--muted);
+      min-height:22px;
+    }
+    .hint{
+      margin-top:10px;
+      font-size:14px;
+      opacity:.6;
     }
 
     .controls{
       display:flex;
       gap:10px;
+      margin-top:14px;
       flex-wrap:wrap;
-      margin-top:10px;
     }
-
-    button, select{
-      padding:10px 14px;
-      border-radius:10px;
-      border:1px solid #ccc;
+    button{
+      border:1px solid var(--btnBorder);
+      background:var(--btn);
+      padding:12px 14px;
+      border-radius:12px;
       font-size:16px;
-      background:#fff;
+      cursor:pointer;
+    }
+    button.primary{ background:var(--primary); border-color:var(--primary); color:#fff; }
+    button.bad{ background:var(--danger); border-color:var(--danger); color:#fff; }
+    button.warn{ background:var(--warn); border-color:var(--warn); color:#fff; }
+    button.good{ background:var(--good); border-color:var(--good); color:#fff; }
+    button:disabled{ opacity:.45; cursor:not-allowed; }
+
+    .panel{
+      margin-top:14px;
+      padding:12px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:var(--card);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .grid{ display:grid; grid-template-columns:1fr; gap:10px; }
+    @media (min-width: 860px){ .grid{ grid-template-columns:1fr 1fr; } }
+
+    .small{ font-size:12px; opacity:.75; line-height:1.35; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    .mcBtn{
+      width:100%;
+      max-width:760px;
+      text-align:left;
+      margin:6px 0;
     }
 
-    input[type=file]{
-      margin-top:10px;
+    @media (max-width:520px){
+      .word{ font-size:44px; }
+      select{ width:100%; }
+      .row{ width:100%; }
+      button{ flex:1 1 45%; }
     }
-
-    h2{margin-top:0}
   </style>
 </head>
 
 <body>
+  <div class="wrap">
+    <div class="top">
+      <div class="row">
+        <div class="pill"><b><span data-i18n="app_title"></span></b></div>
+        <div class="pill" id="deckPill">-</div>
+        <div class="pill" id="statsPill">-</div>
+        <div class="pill" id="netPill">-</div>
+      </div>
 
-<h2>Thai Lernkarten</h2>
+      <div class="row">
+        <select id="uiLang" title="Sprache / ภาษา">
+          <option value="de">Deutsch</option>
+          <option value="th">ไทย</option>
+        </select>
 
-<select id="mode">
-  <option value="th-en">Thai → Englisch</option>
-  <option value="th-de">Thai → Deutsch</option>
-  <option value="en-th">Englisch → Thai</option>
-  <option value="de-th">Deutsch → Thai</option>
-</select>
+        <select id="deck">
+          <option value="custom" data-i18n-opt="deck_custom"></option>
+          <option value="a1" data-i18n-opt="deck_a1"></option>
+          <option value="alltag" data-i18n-opt="deck_alltag"></option>
+        </select>
 
-<select id="train">
-  <option value="cards">Kartenmodus</option>
-  <option value="mc">Multiple Choice</option>
-</select>
+        <select id="mode">
+          <option value="th-en" data-i18n-opt="mode_th_en"></option>
+          <option value="th-de" data-i18n-opt="mode_th_de"></option>
+          <option value="en-th" data-i18n-opt="mode_en_th"></option>
+          <option value="de-th" data-i18n-opt="mode_de_th"></option>
+        </select>
 
-<div id="card" class="card">
-  <div id="frontWord">CSV laden…</div>
-  <div id="sub" class="sub"></div>
-</div>
+        <select id="train">
+          <option value="cards" data-i18n-opt="train_cards"></option>
+          <option value="mc" data-i18n-opt="train_mc"></option>
+        </select>
 
-<div class="controls">
-  <button id="flip">Umdrehen</button>
-  <button id="next">Naechste</button>
-</div>
+        <button id="resetProgress"><span data-i18n="btn_reset_progress"></span></button>
+      </div>
+    </div>
 
-<hr>
+    <div class="cardWrap">
+      <div class="card" id="card" title="Tippen / แตะ">
+        <div class="lang" id="frontLang">-</div>
+        <div class="word" id="frontWord">-</div>
+        <div class="extra" id="sub"></div>
+        <div class="hint" id="hint"><span data-i18n="hint_tap"></span></div>
+      </div>
+    </div>
 
-<b>CSV importieren</b><br>
-<input type="file" id="csvFile" accept=".csv">
+    <div class="controls">
+      <button class="primary" id="flip"><span data-i18n="btn_flip"></span></button>
+      <button class="bad" id="again"><span data-i18n="btn_again"></span></button>
+      <button class="warn" id="hard"><span data-i18n="btn_hard"></span></button>
+      <button class="good" id="good"><span data-i18n="btn_good"></span></button>
+      <button id="next"><span data-i18n="btn_next"></span></button>
+      <button id="speakFront"><span data-i18n="btn_audio_front"></span></button>
+      <button id="speakBack"><span data-i18n="btn_audio_back"></span></button>
+    </div>
 
-<script src="app.js"></script>
+    <div class="panel">
+      <div class="grid">
+        <div>
+          <b><span data-i18n="panel_import_title"></span></b>
+          <div class="small"><span data-i18n="csv_hint"></span></div>
+          <div class="row" style="margin-top:8px">
+            <input id="csvFile" type="file" accept=".csv,text/csv" />
+            <button id="exportCsv"><span data-i18n="btn_export_csv"></span></button>
+            <button id="clearCustom"><span data-i18n="btn_clear_custom"></span></button>
+          </div>
+          <div class="small" style="margin-top:6px">
+            <span data-i18n="current_deck_label"></span>
+            <span class="mono" id="deckInfo">-</span>
+          </div>
+        </div>
 
+        <div>
+          <b><span data-i18n="panel_pwa_title"></span></b>
+          <div class="small"><span data-i18n="pwa_hint"></span></div>
+          <div class="small" style="margin-top:6px">
+            <span data-i18n="pwa_status_label"></span> <span id="pwaStatus">-</span>
+          </div>
+          <div class="small" style="margin-top:6px">
+            <span data-i18n="version_label"></span> <span class="mono" id="ver">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js'); }
+  </script>
 </body>
 </html>

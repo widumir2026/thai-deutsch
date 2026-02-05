@@ -2,11 +2,15 @@ Ersetzen im Repo (thai-deutsch):
 
 - index.html
 - app.js
+- sw.js
+- manifest.webmanifest
 
-Neu:
-- Umschalter UI Sprache (Deutsch / Thai)
-- Labels/Buttons/Optionen werden je nach Sprache gesetzt
-- Layout wie die alte Version (Pills oben, grosse Karte, Button-Leiste)
+Zusätzlich ins Repo legen (wenn noch nicht vorhanden):
+- thai_cards_A1_200.csv
+- thai_cards_alltag_200.csv
+- icon-192.png
+- icon-512.png
 
-Hinweis:
-- Wortliste ist noch klein (nur Demo). Als naechstes bauen wir wieder 200+ Woerter + CSV Import sauber aus.
+Wichtig:
+- Nach dem Upload 1 Commit machen -> GitHub Pages deployt automatisch.
+- Wenn du vorher eine PWA installiert hattest: App einmal löschen und neu installieren (Service Worker Cache).
