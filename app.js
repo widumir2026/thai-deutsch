@@ -1,5 +1,5 @@
 // Thai Lernkarten – kompletter Build (2026-02-06)
-const VERSION = "2026-02-06-i18n-th-1";
+const VERSION = "2026-02-06-mc-stable-1";
 
 // Storage
 const K_UI_LANG = "thai_cards_ui_lang";
@@ -403,6 +403,8 @@ function next(){ pickNext(true); }
 function grade(kind){ if(!current) return; schedule(wordId(current), kind); pickNext(); }
 
 // MC click handling with colours + stats + wrong list
+el.sub.addEventListener("click", (e)=>{ e.stopPropagation(); }, true);
+
 el.sub.addEventListener("click", (e)=>{
   const btn = e.target.closest("button[data-val]");
   if(!btn) return;
@@ -412,6 +414,8 @@ el.sub.addEventListener("click", (e)=>{
   mcLocked = true;
   const buttons = Array.from(el.sub.querySelectorAll("button[data-val]"));
   buttons.forEach(b => b.disabled = true);
+
+  try{
 
   const chosenEsc = btn.getAttribute("data-val") || "";
   const correctEsc = escapeHtml(mcAnswer?.val || "");
@@ -424,7 +428,7 @@ el.sub.addEventListener("click", (e)=>{
 
   // Wenn richtig beantwortet, aus der "falsch"-Liste entfernen (macht Liste kleiner)
   if(ok){
-    removeMcWrongId(activeDeck, wordId(current));
+    try{ removeMcWrongId(activeDeck, wordId(current)); }catch(e){ console.warn(e); }
   }
 
   const green="#047857", red="#b91c1c";
@@ -434,7 +438,7 @@ el.sub.addEventListener("click", (e)=>{
 
   if(!ok){
     const pw = pair(current);
-    addMcWrong(activeDeck, {
+    try{ addMcWrong(activeDeck, {
       id: wordId(current),
       ts: Date.now(),
       q: pw.front,
@@ -469,6 +473,12 @@ el.sub.addEventListener("click", (e)=>{
     if(ok) grade("good");
     else grade("again");
   }, 900);
+
+  }catch(err){
+    console.error(err);
+    mcLocked = false;
+    buttons.forEach(b => b.disabled = false);
+  }
 });
 
 // Audio
