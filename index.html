@@ -106,20 +106,22 @@
     <div class="panel">
       <div class="grid">
         <div>
-          <b>Wortliste (CSV)</b>
-          <div class="small">Import: Header th,roman,en,de,cat. UTF-8. Kommas in Feldern vermeiden.</div>
+          <b id="csvTitle">Wortliste (CSV)</b>
+          <div class="small" id="csvDesc">Import: Header th,roman,en,de,cat. UTF-8. Kommas in Feldern vermeiden.</div>
           <div class="row" style="margin-top:8px">
-            <input id="csvFile" type="file" accept=".csv,text/csv">
+            <input id="csvFile" type="file" accept=".csv,text/csv" style="display:none;">
+            <button id="chooseCsv">Datei auswaehlen</button>
+            <span id="csvFileName" class="small" style="opacity:.8"></span>
             <button id="exportCsv">Export CSV</button>
-            <button id="clearCustom">Eigenes Set löschen</button>
+            <button id="clearCustom">Eigenes Set loeschen</button>
           </div>
-          <div class="small" style="margin-top:6px">Aktiv: <span class="mono" id="deckInfo">-</span></div>
+          <div class="small" style="margin-top:6px"><span id="activeLabel">Aktiv:</span> <span class="mono" id="deckInfo">-</span></div>
         </div>
         <div>
-          <b>Installieren (PWA)</b>
-          <div class="small">iPhone: Safari → Teilen → „Zum Home-Bildschirm“. Android/Chrome: „Installieren“. Offline nach erstem Laden.</div>
-          <div class="small" style="margin-top:6px">Status: <span id="pwaStatus">-</span></div>
-          <div class="small" style="margin-top:6px">Version: <span class="mono" id="ver">-</span></div>
+          <b id="pwaTitle">Installieren (PWA)</b>
+          <div class="small" id="pwaDesc">iPhone: Safari → Teilen → „Zum Home-Bildschirm“. Android/Chrome: „Installieren“. Offline nach erstem Laden.</div>
+          <div class="small" style="margin-top:6px"><span id="statusLabel">Status:</span> <span id="pwaStatus">-</span></div>
+          <div class="small" style="margin-top:6px"><span id="versionLabel">Version:</span> <span class="mono" id="ver">-</span></div>
         </div>
       </div>
     </div>
@@ -127,8 +129,8 @@
     <div class="panel">
       <div class="grid">
         <div>
-          <b>Multiple-Choice falsch</b>
-          <div class="small">Hier siehst du deine falschen Antworten (pro Deck). Du kannst daraus ein Lernset machen.</div>
+          <b id="wrongTitle">Multiple-Choice falsch</b>
+          <div class="small" id="wrongDesc">Hier siehst du deine falschen Antworten (pro Deck). Du kannst daraus ein Lernset machen.</div>
           <div class="row" style="margin-top:8px">
             <button id="learnWrong">Nur falsche lernen</button>
             <button id="learnWrongMC">Falsche als Multiple-Choice</button>
