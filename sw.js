@@ -1,4 +1,4 @@
-const CACHE = "thai-cards-cache-2026-02-06-wronglist-2";
+const CACHE = "thai-cards-cache-2026-02-06-wronglist-3";
 const ASSETS = [
   "./",
   "./index.html",

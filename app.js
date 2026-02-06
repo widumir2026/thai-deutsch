@@ -1,5 +1,5 @@
 // Thai Lernkarten – kompletter Build (2026-02-06)
-const VERSION = "2026-02-06-wronglist-2";
+const VERSION = "2026-02-06-wronglist-3";
 
 // Storage
 const K_UI_LANG = "thai_cards_ui_lang";
@@ -416,7 +416,18 @@ el.clearCustom.addEventListener("click", ()=>{
 });
 
 // Wrong list controls
-el.clearWrong.addEventListener("click", ()=>{ clearMcWrong(activeDeck); updateTop(); });
+el.clearWrong.addEventListener("click", ()=>{
+  clearMcWrong(activeDeck);
+  // Wenn "nur falsche" aktiv ist, zurueckschalten, sonst sind keine Woerter mehr da
+  if(studyWrongOnly){
+    studyWrongOnly = false;
+    localStorage.setItem(K_STUDY_WRONG_ONLY, "0");
+  }
+  rebuildCurrentList();
+  pickNext(true);
+  updateTop();
+});
+
 el.learnWrong.addEventListener("click", ()=>{
   studyWrongOnly = !studyWrongOnly;
   localStorage.setItem(K_STUDY_WRONG_ONLY, studyWrongOnly ? "1" : "0");
