@@ -1,5 +1,5 @@
 // Thai Lernkarten – kompletter Build (2026-02-06)
-const VERSION = "2026-02-06-mc-stable-1";
+const VERSION = "2026-02-06-mc-stable-2";
 
 // Storage
 const K_UI_LANG = "thai_cards_ui_lang";
@@ -403,9 +403,10 @@ function next(){ pickNext(true); }
 function grade(kind){ if(!current) return; schedule(wordId(current), kind); pickNext(); }
 
 // MC click handling with colours + stats + wrong list
-el.sub.addEventListener("click", (e)=>{ e.stopPropagation(); }, true);
+el.sub.addEventListener("click", (e)=>{ 
+  // MC-Buttons duerfen nicht vom Karten-Click abgefangen werden
+  e.stopPropagation();
 
-el.sub.addEventListener("click", (e)=>{
   const btn = e.target.closest("button[data-val]");
   if(!btn) return;
   if(el.train.value!=="mc") return;
@@ -415,69 +416,79 @@ el.sub.addEventListener("click", (e)=>{
   const buttons = Array.from(el.sub.querySelectorAll("button[data-val]"));
   buttons.forEach(b => b.disabled = true);
 
+  let hadError = false;
+
   try{
+    const chosenEsc = btn.getAttribute("data-val") || "";
+    const correctEsc = escapeHtml(mcAnswer?.val || "");
+    const ok = (chosenEsc === correctEsc);
 
-  const chosenEsc = btn.getAttribute("data-val") || "";
-  const correctEsc = escapeHtml(mcAnswer?.val || "");
-  const ok = (chosenEsc === correctEsc);
+    const st = getMcStats(activeDeck);
+    st.total += 1;
+    if(ok) st.correct += 1;
+    saveMcStats();
 
-  const st = getMcStats(activeDeck);
-  st.total += 1;
-  if(ok) st.correct += 1;
-  saveMcStats();
-
-  // Wenn richtig beantwortet, aus der "falsch"-Liste entfernen (macht Liste kleiner)
-  if(ok){
-    try{ removeMcWrongId(activeDeck, wordId(current)); }catch(e){ console.warn(e); }
-  }
-
-  const green="#047857", red="#b91c1c";
-  btn.style.background = ok ? green : red;
-  btn.style.borderColor = ok ? green : red;
-  btn.style.color = "#fff";
-
-  if(!ok){
-    const pw = pair(current);
-    try{ addMcWrong(activeDeck, {
-      id: wordId(current),
-      ts: Date.now(),
-      q: pw.front,
-      qLang: pw.frontLang,
-      qRoman: (pw.frontLang==="Thai" ? (pw.frontExtra||"") : ""),
-      correct: pw.back,
-      correctRoman: (pw.backLang==="Thai" ? (pw.backExtra||"") : ""),
-      chosen: unescapeHtml(chosenEsc)
-    });
-
-    const corrBtn = buttons.find(b => (b.getAttribute("data-val")||"") === correctEsc);
-    if(corrBtn){
-      corrBtn.style.background = green;
-      corrBtn.style.borderColor = green;
-      corrBtn.style.color = "#fff";
+    // Wenn richtig beantwortet, aus der "falsch"-Liste entfernen (macht Liste kleiner)
+    if(ok){
+      try{ removeMcWrongId(activeDeck, wordId(current)); }catch(e){ console.warn(e); }
     }
-  }
 
-  // Wenn wir nur falsche lernen und jetzt leer sind, automatisch zurueckschalten
-  if(studyWrongOnly){
-    rebuildCurrentList();
-    if(!currentList.length){
-      studyWrongOnly = false;
-      localStorage.setItem(K_STUDY_WRONG_ONLY, "0");
-      rebuildCurrentList();
+    const green="#047857", red="#b91c1c";
+    btn.style.background = ok ? green : red;
+    btn.style.borderColor = ok ? green : red;
+    btn.style.color = "#fff";
+
+    if(!ok){
+      // in Wrong-Liste aufnehmen
+      try{
+        const pw = pair(current);
+        addMcWrong(activeDeck, {
+          id: wordId(current),
+          ts: Date.now(),
+          q: pw.front,
+          qLang: pw.frontLang,
+          qRoman: (pw.frontLang==="Thai" ? (pw.frontExtra||"") : ""),
+          correct: pw.back,
+          correctRoman: (pw.backLang==="Thai" ? (pw.backExtra||"") : ""),
+          chosen: unescapeHtml(chosenEsc)
+        });
+      }catch(e){ console.warn(e); }
+
+      const corrBtn = buttons.find(b => (b.getAttribute("data-val")||"") === correctEsc);
+      if(corrBtn){
+        corrBtn.style.background = green;
+        corrBtn.style.borderColor = green;
+        corrBtn.style.color = "#fff";
+      }
     }
+
     updateTop();
-  }
 
-  setTimeout(()=>{
-    mcLocked = false;
-    if(ok) grade("good");
-    else grade("again");
-  }, 900);
+    // Wenn wir nur falsche lernen und jetzt leer sind, automatisch zurueckschalten
+    if(studyWrongOnly){
+      rebuildCurrentList();
+      if(!currentList.length){
+        studyWrongOnly = false;
+        localStorage.setItem(K_STUDY_WRONG_ONLY, "0");
+        rebuildCurrentList();
+      }
+      updateTop();
+    }
+
+    setTimeout(()=>{
+      mcLocked = false;
+      if(ok) grade("good");
+      else grade("again");
+    }, 900);
 
   }catch(err){
     console.error(err);
-    mcLocked = false;
-    buttons.forEach(b => b.disabled = false);
+    hadError = true;
+  }finally{
+    if(hadError){
+      mcLocked = false;
+      buttons.forEach(b => b.disabled = false);
+    }
   }
 });
 

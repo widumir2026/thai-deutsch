@@ -1,4 +1,4 @@
-const CACHE = "thai-cards-cache-2026-02-06-mc-stable-1";
+const CACHE = "thai-cards-cache-2026-02-06-mc-stable-2";
 const ASSETS = [
   "./",
   "./index.html",
