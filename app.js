@@ -1,268 +1,196 @@
+// Thai Lernkarten – kompletter Build (2026-02-06)
+const VERSION = "2026-02-06-wronglist-2";
 
-// ===============================
-// Thai Lernkarten – Features/Design
-// - UI Sprache Umschalter (DE/TH)
-// - Decks: A1, Alltag, Custom (CSV Import)
-// - Kartenmodus + Multiple Choice
-// - Einfaches Spaced Repetition (Again/Hard/Good)
-// - Offline: Wörter + Progress in localStorage
-// ===============================
-
-const VERSION = "2026-02-05-mc-roman-2";
-
-// ---------- Storage Keys ----------
+// Storage
 const K_UI_LANG = "thai_cards_ui_lang";
 const K_CUSTOM_WORDS = "thai_cards_custom_words_v1";
 const K_PROGRESS = "thai_cards_progress_v1";
 const K_ACTIVE_DECK = "thai_cards_active_deck_v1";
 const K_MC_STATS = "thai_cards_mc_stats_v1";
+const K_MC_WRONG = "thai_cards_mc_wrong_v1";
+const K_STUDY_WRONG_ONLY = "thai_cards_study_wrong_only_v1";
 
 let uiLang = localStorage.getItem(K_UI_LANG) || "de";
+let activeDeck = localStorage.getItem(K_ACTIVE_DECK) || "custom";
 
-// ---------- i18n ----------
-const I18N = {
-  app_title: { de: "Thai Lernkarten", th: "บัตรคำภาษาไทย" },
+function safeJsonParse(s, fallback){ try{ return s ? JSON.parse(s) : fallback; }catch(e){ return fallback; } }
+function $(id){ return document.getElementById(id); }
 
-  deck_custom: { de: "Eigenes Set", th: "ชุดของฉัน" },
-  deck_a1: { de: "A1 (200)", th: "A1 (200)" },
-  deck_alltag: { de: "Alltag (200)", th: "ชีวิตประจำวัน (200)" },
+function escapeHtml(s){ return (s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;"); }
+function unescapeHtml(s){ return (s||"").replaceAll("&lt;","<").replaceAll("&gt;",">").replaceAll("&quot;",'"').replaceAll("&#39;","'").replaceAll("&amp;","&"); }
 
-  mode_th_en: { de: "Thai → Englisch", th: "ไทย → อังกฤษ" },
-  mode_th_de: { de: "Thai → Deutsch", th: "ไทย → เยอรมัน" },
-  mode_en_th: { de: "Englisch → Thai", th: "อังกฤษ → ไทย" },
-  mode_de_th: { de: "Deutsch → Thai", th: "เยอรมัน → ไทย" },
+// Progress (SR)
+let progress = safeJsonParse(localStorage.getItem(K_PROGRESS), {});
+function saveProgress(){ localStorage.setItem(K_PROGRESS, JSON.stringify(progress)); }
 
-  train_cards: { de: "Kartenmodus", th: "โหมดบัตร" },
-  train_mc: { de: "Multiple-Choice", th: "ปรนัย" },
+// MC stats + wrong
+let mcStats = safeJsonParse(localStorage.getItem(K_MC_STATS), {});
+let mcWrong = safeJsonParse(localStorage.getItem(K_MC_WRONG), {});
+let studyWrongOnly = (localStorage.getItem(K_STUDY_WRONG_ONLY) === "1");
 
-  btn_flip: { de: "Umdrehen", th: "พลิก" },
-  btn_again: { de: "Nochmal", th: "อีกครั้ง" },
-  btn_hard: { de: "Schwer", th: "ยาก" },
-  btn_good: { de: "Gekonnt", th: "รู้แล้ว" },
-  btn_next: { de: "Nächste", th: "ถัดไป" },
-  btn_audio_front: { de: "Audio vorne", th: "เสียงหน้า" },
-  btn_audio_back: { de: "Audio hinten", th: "เสียงหลัง" },
+function getMcStats(deckKey){ if(!mcStats[deckKey]) mcStats[deckKey] = { correct:0, total:0 }; return mcStats[deckKey]; }
+function saveMcStats(){ localStorage.setItem(K_MC_STATS, JSON.stringify(mcStats)); }
+function resetMcStats(deckKey){ mcStats[deckKey] = { correct:0, total:0 }; saveMcStats(); }
 
-  btn_reset_progress: { de: "Fortschritt löschen", th: "ลบความคืบหน้า" },
+function getMcWrong(deckKey){ if(!mcWrong[deckKey]) mcWrong[deckKey] = []; return mcWrong[deckKey]; }
+function saveMcWrong(){ localStorage.setItem(K_MC_WRONG, JSON.stringify(mcWrong)); }
+function addMcWrong(deckKey, entry){
+  const arr = getMcWrong(deckKey);
+  arr.unshift(entry);
+  if(arr.length > 200) arr.length = 200;
+  saveMcWrong();
+}
+function clearMcWrong(deckKey){ mcWrong[deckKey] = []; saveMcWrong(); }
 
-  hint_tap: { de: "Tippen zum Umdrehen", th: "แตะเพื่อพลิก" },
+// Word id/hash
+function hashStr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h>>>0).toString(16); }
+function wordId(w){ return hashStr((w.th||"")+"|"+(w.en||"")+"|"+(w.de||"")); }
 
-  panel_import_title: { de: "Wortliste (CSV)", th: "รายการคำ (CSV)" },
-  csv_hint: {
-    de: "Import-CSV: Header th,roman,en,de,cat. UTF-8. Kommas in Feldern vermeiden.",
-    th: "CSV: ส่วนหัว th,roman,en,de,cat. UTF-8. หลีกเลี่ยงเครื่องหมายจุลภาคในข้อความ"
-  },
-  btn_export_csv: { de: "Export CSV", th: "ส่งออก CSV" },
-  btn_clear_custom: { de: "Eigenes Set löschen", th: "ลบชุดของฉัน" },
-  current_deck_label: { de: "Aktiv:", th: "ใช้งาน:" },
+function getProg(id){ if(!progress[id]) progress[id] = { box:0, nextDue:0, seen:0, right:0, wrong:0 }; return progress[id]; }
+function schedule(id, grade){ 
+  const p = getProg(id); p.seen += 1;
+  if(grade==="again"){ p.wrong += 1; p.box = 0; p.nextDue = Date.now() + 2*60*1000; }
+  else if(grade==="hard"){ p.right += 1; p.box = Math.min(5, Math.max(0, p.box+1)); const mins=[5,15,60,6*60,24*60,3*24*60][p.box]; p.nextDue = Date.now()+mins*60*1000; }
+  else { p.right += 1; p.box = Math.min(5, p.box+2); const mins=[10,60,6*60,24*60,3*24*60,7*24*60][p.box]; p.nextDue = Date.now()+mins*60*1000; }
+  saveProgress();
+}
 
-  panel_pwa_title: { de: "Installieren (PWA)", th: "ติดตั้ง (PWA)" },
-  pwa_hint: {
-    de: "iPhone: Safari → Teilen → „Zum Home-Bildschirm“. Android/Chrome: „Installieren“. Offline nach erstem Laden.",
-    th: "iPhone: Safari → แชร์ → „เพิ่มไปยังหน้าจอโฮม“. Android/Chrome: „ติดตั้ง“. ออฟไลน์หลังโหลดครั้งแรก."
-  },
-  pwa_status_label: { de: "Status:", th: "สถานะ:" },
-  version_label: { de: "Version:", th: "เวอร์ชัน:" },
-
-  msg_import_ok: { de: "Wörter importiert", th: "นำเข้าคำแล้ว" },
-  msg_import_fail: { de: "Import fehlgeschlagen", th: "นำเข้าไม่สำเร็จ" },
-  msg_need_custom: { de: "Eigenes Set ist leer. Bitte CSV importieren.", th: "ชุดของฉันว่าง กรุณานำเข้า CSV" },
-  msg_progress_cleared: { de: "Fortschritt gelöscht", th: "ลบความคืบหน้าแล้ว" },
-  msg_custom_cleared: { de: "Eigenes Set gelöscht", th: "ลบชุดของฉันแล้ว" }
+// DOM
+const el = {
+  titlePill: $("titlePill"),
+  deckPill: $("deckPill"),
+  statsPill: $("statsPill"),
+  netPill: $("netPill"),
+  uiLang: $("uiLang"),
+  deck: $("deck"),
+  mode: $("mode"),
+  train: $("train"),
+  resetProgress: $("resetProgress"),
+  card: $("card"),
+  frontLang: $("frontLang"),
+  frontWord: $("frontWord"),
+  sub: $("sub"),
+  hint: $("hint"),
+  flip: $("flip"),
+  again: $("again"),
+  hard: $("hard"),
+  good: $("good"),
+  next: $("next"),
+  speakFront: $("speakFront"),
+  speakBack: $("speakBack"),
+  csvFile: $("csvFile"),
+  exportCsv: $("exportCsv"),
+  clearCustom: $("clearCustom"),
+  deckInfo: $("deckInfo"),
+  pwaStatus: $("pwaStatus"),
+  ver: $("ver"),
+  wrongList: $("wrongList"),
+  learnWrong: $("learnWrong"),
+  clearWrong: $("clearWrong")
 };
 
-function t(key){
-  const x = I18N[key];
-  if(!x) return key;
-  return uiLang === "th" ? x.th : x.de;
-}
+el.ver.textContent = VERSION;
 
-function applyI18n(){
-  document.querySelectorAll("[data-i18n]").forEach(el=>{
-    el.textContent = t(el.getAttribute("data-i18n"));
-  });
-  document.querySelectorAll("[data-i18n-opt]").forEach(el=>{
-    el.textContent = t(el.getAttribute("data-i18n-opt"));
-  });
-}
+// Decks
+let decks = { a1:[], alltag:[], custom:[] };
+function loadCustom(){ decks.custom = safeJsonParse(localStorage.getItem(K_CUSTOM_WORDS), []); }
+function saveCustom(){ localStorage.setItem(K_CUSTOM_WORDS, JSON.stringify(decks.custom)); }
 
-// ---------- Deck Daten (werden per CSV geliefert; hier laden wir per fetch) ----------
-async function fetchCsv(path){
-  const res = await fetch(path, { cache: "no-store" });
-  if(!res.ok) throw new Error("Fetch failed: " + path);
-  const text = await res.text();
-  return parseCsv(text);
-}
-
+// CSV parse (simple, no commas in fields)
 function parseCsv(text){
-  // Simple CSV parser (keine Kommas in Feldern; passt zu unseren Listen)
   const rows = text.split(/\r?\n/).filter(r => r.trim());
   if(rows.length < 2) return [];
-  const header = rows[0].split(",").map(s => s.trim().toLowerCase());
-  const idx = (name) => header.indexOf(name);
-
-  const iTh = idx("th");
-  const iRo = idx("roman");
-  const iEn = idx("en");
-  const iDe = idx("de");
-  const iCat = idx("cat");
-
-  const out = [];
+  const header = rows[0].split(",").map(x => x.trim().toLowerCase());
+  const idx = (n) => header.indexOf(n);
+  const iTh=idx("th"), iRo=idx("roman"), iEn=idx("en"), iDe=idx("de"), iCat=idx("cat");
+  const out=[];
   for(const row of rows.slice(1)){
     const c = row.split(",");
     out.push({
-      th: (c[iTh] || "").trim(),
-      roman: (iRo>=0 ? (c[iRo] || "").trim() : ""),
-      en: (c[iEn] || "").trim(),
-      de: (c[iDe] || "").trim(),
-      cat: (iCat>=0 ? (c[iCat] || "").trim() : "")
+      th: (c[iTh]||"").trim(),
+      roman: (iRo>=0 ? (c[iRo]||"").trim() : ""),
+      en: (c[iEn]||"").trim(),
+      de: (c[iDe]||"").trim(),
+      cat: (iCat>=0 ? (c[iCat]||"").trim() : "")
     });
   }
   return out.filter(w => w.th || w.en || w.de);
 }
 
-// ---------- Progress (Spaced Repetition) ----------
-// box: 0..5, nextDue: timestamp
-let progress = safeJsonParse(localStorage.getItem(K_PROGRESS), {});
-
-let mcStats = safeJsonParse(localStorage.getItem(K_MC_STATS), {});
-
-function getMcStats(deckKey){
-  if(!mcStats[deckKey]) mcStats[deckKey] = { correct: 0, total: 0 };
-  return mcStats[deckKey];
-}
-function saveMcStats(){
-  localStorage.setItem(K_MC_STATS, JSON.stringify(mcStats));
-}
-function resetMcStats(deckKey=null){
-  if(deckKey){
-    mcStats[deckKey] = { correct: 0, total: 0 };
-  } else {
-    mcStats = {};
-  }
-  saveMcStats();
+async function fetchCsv(path){
+  const res = await fetch(path, { cache:"no-store" });
+  if(!res.ok) return [];
+  return parseCsv(await res.text());
 }
 
-// wordId: stable hash of content
-function wordId(w){
-  return hashStr((w.th||"") + "|" + (w.en||"") + "|" + (w.de||""));
+function deckLabel(k){
+  if(uiLang==="th"){ if(k==="a1") return "A1 (200)"; if(k==="alltag") return "ชีวิตประจำวัน (200)"; return "ชุดของฉัน"; }
+  if(k==="a1") return "A1 (200)";
+  if(k==="alltag") return "Alltag (200)";
+  return "Eigenes Set";
 }
 
-function hashStr(s){
-  // simple deterministic hash (FNV-1a like)
-  let h = 2166136261;
-  for(let i=0;i<s.length;i++){
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0).toString(16);
+function langLabel(name){
+  if(uiLang==="th"){ if(name==="Thai") return "ไทย"; if(name==="Deutsch") return "เยอรมัน"; if(name==="Englisch") return "อังกฤษ"; }
+  return name;
 }
 
-function safeJsonParse(s, fallback){
-  try{ return s ? JSON.parse(s) : fallback; }catch(e){ return fallback; }
-}
-
-function saveProgress(){
-  localStorage.setItem(K_PROGRESS, JSON.stringify(progress));
-}
-
-function getProg(id){
-  if(!progress[id]) progress[id] = { box: 0, nextDue: 0, seen: 0, right: 0, wrong: 0 };
-  return progress[id];
-}
-
-function schedule(id, grade){
-  // grade: again|hard|good
-  const p = getProg(id);
-  p.seen += 1;
-
-  if(grade === "again"){
-    p.wrong += 1;
-    p.box = 0;
-    p.nextDue = Date.now() + 2*60*1000; // 2 Minuten
-  } else if(grade === "hard"){
-    p.right += 1;
-    p.box = Math.min(5, Math.max(0, p.box + 1));
-    const mins = [5, 15, 60, 6*60, 24*60, 3*24*60][p.box];
-    p.nextDue = Date.now() + mins*60*1000;
-  } else {
-    p.right += 1;
-    p.box = Math.min(5, p.box + 2);
-    const mins = [10, 60, 6*60, 24*60, 3*24*60, 7*24*60][p.box];
-    p.nextDue = Date.now() + mins*60*1000;
-  }
-  saveProgress();
-}
-
-// ---------- App State ----------
-const el = {
-  uiLang: document.getElementById("uiLang"),
-  deck: document.getElementById("deck"),
-  mode: document.getElementById("mode"),
-  train: document.getElementById("train"),
-  card: document.getElementById("card"),
-  frontLang: document.getElementById("frontLang"),
-  frontWord: document.getElementById("frontWord"),
-  sub: document.getElementById("sub"),
-  hint: document.getElementById("hint"),
-  flip: document.getElementById("flip"),
-  again: document.getElementById("again"),
-  hard: document.getElementById("hard"),
-  good: document.getElementById("good"),
-  next: document.getElementById("next"),
-  speakFront: document.getElementById("speakFront"),
-  speakBack: document.getElementById("speakBack"),
-  resetProgress: document.getElementById("resetProgress"),
-  csvFile: document.getElementById("csvFile"),
-  exportCsv: document.getElementById("exportCsv"),
-  clearCustom: document.getElementById("clearCustom"),
-  deckPill: document.getElementById("deckPill"),
-  statsPill: document.getElementById("statsPill"),
-  netPill: document.getElementById("netPill"),
-  deckInfo: document.getElementById("deckInfo"),
-  pwaStatus: document.getElementById("pwaStatus"),
-  ver: document.getElementById("ver")
-};
-
-el.ver.textContent = VERSION;
-
-let decks = {
-  a1: [],
-  alltag: [],
-  custom: []
-};
-
-let activeDeck = localStorage.getItem(K_ACTIVE_DECK) || "custom";
 let currentList = [];
 let current = null;
 let flipped = false;
 let mcAnswer = null;
+let mcLocked = false;
 
-// ---------- Deck Loading ----------
-function loadCustomFromStorage(){
-  decks.custom = safeJsonParse(localStorage.getItem(K_CUSTOM_WORDS), []);
-}
-
-function saveCustomToStorage(){
-  localStorage.setItem(K_CUSTOM_WORDS, JSON.stringify(decks.custom));
-}
-
-function deckLabel(key){
-  if(key==="a1") return t("deck_a1");
-  if(key==="alltag") return t("deck_alltag");
-  return t("deck_custom");
-}
-
-function setDeck(key){
-  activeDeck = key;
-  localStorage.setItem(K_ACTIVE_DECK, key);
-
-  currentList = decks[key] || [];
-  if(key==="custom" && currentList.length===0){
-    toast(t("msg_need_custom"));
+function rebuildCurrentList(){
+  if(studyWrongOnly){
+    const wrong = getMcWrong(activeDeck);
+    const ids = new Set(wrong.map(e => e.id).filter(Boolean));
+    currentList = (decks[activeDeck]||[]).filter(w => ids.has(wordId(w)));
+  } else {
+    currentList = decks[activeDeck] || [];
   }
-  pickNext(true);
-  updateTop();
+}
+
+function countDue(list){
+  const now=Date.now(); let n=0;
+  for(const w of list){ if(getProg(wordId(w)).nextDue <= now) n++; }
+  return n;
+}
+
+function updateWrongPanel(){
+  if(!el.wrongList) return;
+  const wrong = getMcWrong(activeDeck);
+  const seen=new Set(); const unique=[];
+  for(const e of wrong){ if(!e.id) continue; if(seen.has(e.id)) continue; seen.add(e.id); unique.push(e); if(unique.length>=40) break; }
+  el.learnWrong.textContent = studyWrongOnly ? (uiLang==="th" ? "กลับไปเรียนปกติ" : "Zurück zum normalen Lernen") : (uiLang==="th" ? "เรียนเฉพาะที่ตอบผิด" : "Nur falsche MC lernen");
+  el.clearWrong.textContent = uiLang==="th" ? "ลบรายการผิด" : "Falsche Liste leeren";
+
+  if(unique.length===0){
+    el.wrongList.innerHTML = `<div class="small">${uiLang==="th" ? "ยังไม่มีข้อที่ตอบผิด" : "Noch keine falschen Antworten."}</div>`;
+    return;
+  }
+
+  el.wrongList.innerHTML = unique.map(e=>{
+    const q = escapeHtml(e.q||"");
+    const qro = escapeHtml(e.qRoman||"");
+    const corr = escapeHtml(e.correct||"");
+    const cro = escapeHtml(e.correctRoman||"");
+    const chosen = escapeHtml(e.chosen||"");
+
+    const qLine = qro ? `${q}<div class="small">${uiLang==="th" ? "คำอ่าน: " : "Umschrift: "}${qro}</div>` : q;
+    const cLine = cro ? `${corr}<div class="small">${uiLang==="th" ? "คำอ่าน: " : "Umschrift: "}${cro}</div>` : corr;
+
+    return `
+      <div style="border:1px solid var(--border); border-radius:12px; padding:10px; background:var(--card); margin-top:8px;">
+        <div class="small" style="opacity:.7">Frage (${escapeHtml(e.qLang||"")})</div>
+        <div style="font-weight:700; margin-top:2px">${qLine}</div>
+        <div class="small" style="opacity:.7; margin-top:8px">Richtig</div>
+        <div style="font-weight:700; margin-top:2px">${cLine}</div>
+        <div class="small" style="opacity:.7; margin-top:8px">Deine Antwort</div>
+        <div style="margin-top:2px">${chosen}</div>
+      </div>
+    `;
+  }).join("");
 }
 
 function updateTop(){
@@ -273,25 +201,15 @@ function updateTop(){
   const base = (uiLang==="th" ? "พร้อม" : "fällig") + ": " + due + " / " + currentList.length;
 
   const s = getMcStats(activeDeck);
-  const mcPart = (uiLang==="th" ? " | MC ถูก: " : " | MC richtig: ") + s.correct + " / " + s.total;
+  const wrong = s.total - s.correct;
+  const mcPart = (uiLang==="th" ? " | ปรนัย ถูก/ผิด: " : " | Multiple-Choice richtig/falsch: ") + s.correct + " / " + wrong;
 
   el.statsPill.textContent = base + mcPart;
+  el.deckInfo.textContent = activeDeck + " (" + currentList.length + ")" + (studyWrongOnly ? " [WRONG]" : "");
 
-  el.deckInfo.textContent = activeDeck + " (" + currentList.length + ")";
+  updateWrongPanel();
 }
 
-function countDue(list){
-  const now = Date.now();
-  let n = 0;
-  for(const w of list){
-    const id = wordId(w);
-    const p = getProg(id);
-    if(p.nextDue <= now) n += 1;
-  }
-  return n;
-}
-
-// ---------- Card Generation ----------
 function pair(w){
   const m = el.mode.value;
   if(m==="th-en") return { frontLang:"Thai", front:w.th, frontExtra:w.roman||"", backLang:"Englisch", back:w.en, backExtra:"" };
@@ -300,13 +218,14 @@ function pair(w){
   return { frontLang:"Deutsch", front:w.de, frontExtra:"", backLang:"Thai", back:w.th, backExtra:w.roman||"" };
 }
 
-function langLabel(name){
-  if(uiLang==="th"){
-    if(name==="Thai") return "ไทย";
-    if(name==="Deutsch") return "เยอรมัน";
-    if(name==="Englisch") return "อังกฤษ";
-  }
-  return name;
+function pickNext(forceAny=false){
+  if(!currentList.length){ current=null; render(); updateTop(); return; }
+  const now=Date.now();
+  const due = currentList.filter(w => getProg(wordId(w)).nextDue <= now);
+  const pool = due.length ? due : (forceAny ? currentList : due);
+  current = pool[Math.floor(Math.random()*pool.length)];
+  flipped=false; mcAnswer=null; mcLocked=false;
+  render(); updateTop();
 }
 
 function render(){
@@ -314,65 +233,51 @@ function render(){
     el.frontLang.textContent = "-";
     el.frontWord.textContent = uiLang==="th" ? "ไม่มีคำ" : "Keine Wörter";
     el.sub.textContent = "";
-    el.again.disabled = el.hard.disabled = el.good.disabled = true;
-    el.flip.disabled = el.next.disabled = true;
-    el.speakFront.disabled = el.speakBack.disabled = true;
     return;
   }
-
-  el.again.disabled = el.hard.disabled = el.good.disabled = false;
-  el.flip.disabled = el.next.disabled = false;
-  el.speakFront.disabled = el.speakBack.disabled = false;
 
   const p = pair(current);
 
   if(el.train.value==="cards"){
-    el.frontLang.textContent = flipped ? langLabel(p.backLang) : langLabel(p.frontLang);
-    el.frontWord.textContent = flipped ? p.back : p.front;
-
+    const showLang = flipped ? p.backLang : p.frontLang;
+    const showWord = flipped ? p.back : p.front;
     const extra = flipped ? (p.backExtra||"") : (p.frontExtra||"");
-    const whichLang = flipped ? p.backLang : p.frontLang;
-    el.sub.textContent = (extra && whichLang==="Thai")
-      ? ((uiLang==="th" ? "คำอ่าน: " : "Umschrift: ") + extra)
-      : "";
+
+    el.frontLang.textContent = langLabel(showLang);
+    el.frontWord.textContent = showWord;
+
+    if(showLang==="Thai" && extra){
+      el.sub.textContent = (uiLang==="th" ? "คำอ่าน: " : "Umschrift: ") + extra;
+    } else {
+      el.sub.textContent = "";
+    }
     return;
   }
 
-  // Multiple choice
-  flipped = false;
+  // Multiple-Choice
   el.frontLang.textContent = langLabel(p.frontLang);
   el.frontWord.textContent = p.front;
 
-  // Umschrift anzeigen, wenn Thai die FRAGE ist
-  const qRoman = (p.frontLang === "Thai" && (p.frontExtra||"")) ? (p.frontExtra||"") : "";
-  const qRomanHtml = qRoman
-    ? `<div style="opacity:.7; font-size:15px; margin-top:6px;">${uiLang==="th" ? "คำอ่าน: " : "Umschrift: "}${escapeHtml(qRoman)}</div>`
-    : "";
+  const qRoman = (p.frontLang==="Thai" && (p.frontExtra||"")) ? p.frontExtra : "";
+  const qRomanHtml = qRoman ? `<div style="opacity:.7; font-size:15px; margin-top:6px;">${uiLang==="th" ? "คำอ่าน: " : "Umschrift: "}${escapeHtml(qRoman)}</div>` : "";
 
-  // Optionen: wenn die Loesung Thai ist, zeige auch Umschrift (roman)
-  const isThaiAnswer = (p.backLang === "Thai");
+  const isThaiAnswer = (p.backLang==="Thai");
   const candidates = currentList.map(x => {
     const px = pair(x);
-    return { val: px.back, roman: (px.backLang==="Thai" ? (px.backExtra||"") : ""), lang: px.backLang };
-  }).filter(c => c.lang === p.backLang && (c.val||"").trim() !== "");
+    return { val:px.back, roman:(px.backLang==="Thai" ? (px.backExtra||"") : ""), lang:px.backLang };
+  }).filter(c => c.lang===p.backLang && (c.val||"").trim()!=="");
 
-  const opts = [{ val: p.back, roman: isThaiAnswer ? (p.backExtra||"") : "" }];
-
-  while(opts.length < 4 && candidates.length){
-    const r = candidates[Math.floor(Math.random() * candidates.length)];
-    if(!opts.some(o => o.val === r.val)){
-      opts.push({ val: r.val, roman: r.roman || "" });
-    }
+  const opts = [{ val:p.back, roman: isThaiAnswer ? (p.backExtra||"") : "" }];
+  while(opts.length<4 && candidates.length){
+    const r = candidates[Math.floor(Math.random()*candidates.length)];
+    if(!opts.some(o => o.val===r.val)) opts.push({ val:r.val, roman:r.roman||"" });
   }
+  opts.sort(()=>Math.random()-0.5);
+  mcAnswer = { val:p.back, roman: isThaiAnswer ? (p.backExtra||"") : "" };
 
-  // Shuffle
-  opts.sort(() => Math.random() - 0.5);
-
-  mcAnswer = { val: p.back, roman: isThaiAnswer ? (p.backExtra||"") : "" };
-
-  const optsHtml = opts.map(o => {
-    const v = escapeHtml(o.val);
-    const ro = escapeHtml(o.roman || "");
+  const optsHtml = opts.map(o=>{
+    const v=escapeHtml(o.val);
+    const ro=escapeHtml(o.roman||"");
     if(isThaiAnswer && ro){
       return `<button class="mcBtn" data-val="${v}">
         <div style="font-size:20px; font-weight:700;">${v}</div>
@@ -383,111 +288,68 @@ function render(){
   }).join("");
 
   el.sub.innerHTML = qRomanHtml + optsHtml;
-
-  mcLocked = false;
 }
 
-function escapeHtml(s){
-  return (s||"")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#39;");
-}
+function flip(){ if(el.train.value!=="cards") return; flipped=!flipped; render(); }
+function next(){ pickNext(true); }
+function grade(kind){ if(!current) return; schedule(wordId(current), kind); pickNext(); }
 
-// ---------- Selection ----------
-function pickNext(forceAny=false){
-  if(!currentList.length){
-    current = null;
-    render();
-    updateTop();
-    return;
-  }
-
-  const now = Date.now();
-  const due = currentList.filter(w => getProg(wordId(w)).nextDue <= now);
-  const pool = due.length ? due : (forceAny ? currentList : due);
-
-  const w = pool[Math.floor(Math.random()*pool.length)];
-  current = w;
-  flipped = false;
-  mcAnswer = null;
-  render();
-  updateTop();
-}
-
-// ---------- Actions ----------
-function flip(){
-  if(el.train.value!=="cards") return;
-  flipped = !flipped;
-  render();
-}
-
-function grade(kind){
-  if(!current) return;
-  schedule(wordId(current), kind);
-  pickNext();
-}
-
-function next(){
-  pickNext(true);
-}
-
-// Multiple-Choice Klick-Handling (Feedback + Statistik)
-let mcLocked = false;
-
-el.sub.addEventListener("click", (e) => {
+// MC click handling with colours + stats + wrong list
+el.sub.addEventListener("click", (e)=>{
   const btn = e.target.closest("button[data-val]");
   if(!btn) return;
-  if(el.train.value !== "mc") return;
+  if(el.train.value!=="mc") return;
   if(mcLocked) return;
 
   mcLocked = true;
-
   const buttons = Array.from(el.sub.querySelectorAll("button[data-val]"));
   buttons.forEach(b => b.disabled = true);
 
-  const chosen = btn.getAttribute("data-val") || "";
+  const chosenEsc = btn.getAttribute("data-val") || "";
   const correctEsc = escapeHtml(mcAnswer?.val || "");
-  const ok = (correctEsc === chosen);
+  const ok = (chosenEsc === correctEsc);
 
-  // Statistik pro Deck
   const st = getMcStats(activeDeck);
   st.total += 1;
   if(ok) st.correct += 1;
   saveMcStats();
-  updateTop();
 
-  // Feedback Farben
-  const green = "#047857";
-  const red = "#b91c1c";
-
+  const green="#047857", red="#b91c1c";
   btn.style.background = ok ? green : red;
   btn.style.borderColor = ok ? green : red;
   btn.style.color = "#fff";
 
   if(!ok){
-    const correctBtn = buttons.find(b => (b.getAttribute("data-val") || "") === correctEsc);
-    if(correctBtn){
-      correctBtn.style.background = green;
-      correctBtn.style.borderColor = green;
-      correctBtn.style.color = "#fff";
+    const pw = pair(current);
+    addMcWrong(activeDeck, {
+      id: wordId(current),
+      ts: Date.now(),
+      q: pw.front,
+      qLang: pw.frontLang,
+      qRoman: (pw.frontLang==="Thai" ? (pw.frontExtra||"") : ""),
+      correct: pw.back,
+      correctRoman: (pw.backLang==="Thai" ? (pw.backExtra||"") : ""),
+      chosen: unescapeHtml(chosenEsc)
+    });
+
+    const corrBtn = buttons.find(b => (b.getAttribute("data-val")||"") === correctEsc);
+    if(corrBtn){
+      corrBtn.style.background = green;
+      corrBtn.style.borderColor = green;
+      corrBtn.style.color = "#fff";
     }
   }
 
-  // kurze Anzeige, dann weiter
-  setTimeout(() => {
+  updateTop();
+
+  setTimeout(()=>{
     mcLocked = false;
-    if(ok){
-      grade("good");
-    } else {
-      grade("again");
-    }
+    if(ok) grade("good");
+    else grade("again");
   }, 900);
 });
 
-// ---------- Speech ----------
+// Audio
 function speak(text, lang){
   if(!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
@@ -497,7 +359,6 @@ function speak(text, lang){
   if(lang==="de") u.lang="de-DE";
   window.speechSynthesis.speak(u);
 }
-
 function currentTexts(){
   if(!current) return null;
   const p = pair(current);
@@ -508,27 +369,30 @@ function currentTexts(){
   return { frontText, backText, frontLang, backLang };
 }
 
-// ---------- CSV Import/Export ----------
-el.csvFile.addEventListener("change", e => {
-  const file = e.target.files[0];
-  if(!file) return;
+el.speakFront.addEventListener("click", ()=>{
+  const x=currentTexts(); if(!x) return;
+  const lc = (x.frontLang==="Thai")?"th":(x.frontLang==="Englisch")?"en":"de";
+  speak(x.frontText, lc);
+});
+el.speakBack.addEventListener("click", ()=>{
+  const x=currentTexts(); if(!x) return;
+  const lc = (x.backLang==="Thai")?"th":(x.backLang==="Englisch")?"en":"de";
+  speak(x.backText, lc);
+});
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    try{
-      const list = parseCsv(reader.result);
-      if(!list.length) throw new Error("empty");
-      decks.custom = list;
-      saveCustomToStorage();
-      setDeck("custom");
-      toast(list.length + " " + t("msg_import_ok"));
-      bumpCacheAndReloadHint();
-    }catch(err){
-      toast(t("msg_import_fail"));
-      console.error(err);
-    }
+// CSV import/export
+el.csvFile.addEventListener("change", (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    const list = parseCsv(r.result);
+    if(!list.length) return alert("Import fehlgeschlagen");
+    decks.custom = list; saveCustom();
+    activeDeck = "custom"; localStorage.setItem(K_ACTIVE_DECK, activeDeck);
+    rebuildCurrentList(); pickNext(true); updateTop();
+    alert(list.length + " Wörter importiert");
   };
-  reader.readAsText(file, "utf-8");
+  r.readAsText(file, "utf-8");
 });
 
 function exportCsv(list){
@@ -537,123 +401,73 @@ function exportCsv(list){
     const s = (v ?? "").toString();
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
   }).join(",")).join("\n");
-
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = "thai_cards_" + activeDeck + ".csv";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  a.href=url; a.download="thai_cards_"+activeDeck+".csv";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
-
 el.exportCsv.addEventListener("click", ()=> exportCsv(currentList));
 
 el.clearCustom.addEventListener("click", ()=>{
-  if(activeDeck !== "custom"){
-    toast(uiLang==="th" ? "สลับไปที่ ชุดของฉัน ก่อน" : "Bitte zuerst auf „Eigenes Set“ wechseln.");
-    return;
-  }
-  decks.custom = [];
-  saveCustomToStorage();
-  toast(t("msg_custom_cleared"));
-  setDeck("custom");
+  if(activeDeck!=="custom") return alert("Bitte zuerst auf „Eigenes Set“ wechseln.");
+  decks.custom = []; saveCustom();
+  rebuildCurrentList(); pickNext(true); updateTop();
 });
 
-// ---------- Progress Reset ----------
-el.resetProgress.addEventListener("click", ()=>{
-  progress = {};
-  saveProgress();
-  resetMcStats(activeDeck);
-  toast(t("msg_progress_cleared"));
-  updateTop();
+// Wrong list controls
+el.clearWrong.addEventListener("click", ()=>{ clearMcWrong(activeDeck); updateTop(); });
+el.learnWrong.addEventListener("click", ()=>{
+  studyWrongOnly = !studyWrongOnly;
+  localStorage.setItem(K_STUDY_WRONG_ONLY, studyWrongOnly ? "1" : "0");
+  rebuildCurrentList(); pickNext(true); updateTop();
 });
 
-// ---------- UI wiring ----------
+// UI controls
 el.uiLang.value = uiLang;
 el.uiLang.addEventListener("change", ()=>{
   uiLang = el.uiLang.value;
   localStorage.setItem(K_UI_LANG, uiLang);
-  applyI18n();
-  updateTop();
-  render();
+  updateTop(); render();
 });
 
 el.deck.value = activeDeck;
-el.deck.addEventListener("change", ()=> setDeck(el.deck.value));
+el.deck.addEventListener("change", ()=>{
+  activeDeck = el.deck.value;
+  localStorage.setItem(K_ACTIVE_DECK, activeDeck);
+  rebuildCurrentList(); pickNext(true); updateTop();
+});
 
 el.mode.addEventListener("change", ()=>{ flipped=false; render(); });
 el.train.addEventListener("change", ()=>{ flipped=false; render(); });
 
-el.card.addEventListener("click", ()=>{
-  if(el.train.value==="cards") flip();
-});
-
+el.card.addEventListener("click", ()=>{ if(el.train.value==="cards") flip(); });
 el.flip.addEventListener("click", flip);
-el.again.addEventListener("click", ()=> grade("again"));
-el.hard.addEventListener("click", ()=> grade("hard"));
-el.good.addEventListener("click", ()=> grade("good"));
 el.next.addEventListener("click", next);
+el.again.addEventListener("click", ()=>grade("again"));
+el.hard.addEventListener("click", ()=>grade("hard"));
+el.good.addEventListener("click", ()=>grade("good"));
 
-el.speakFront.addEventListener("click", ()=>{
-  const x = currentTexts();
-  if(!x) return;
-  const lc = (x.frontLang==="Thai")?"th":(x.frontLang==="Englisch")?"en":"de";
-  speak(x.frontText, lc);
-});
-el.speakBack.addEventListener("click", ()=>{
-  const x = currentTexts();
-  if(!x) return;
-  const lc = (x.backLang==="Thai")?"th":(x.backLang==="Englisch")?"en":"de";
-  speak(x.backText, lc);
+el.resetProgress.addEventListener("click", ()=>{
+  progress = {}; saveProgress();
+  resetMcStats(activeDeck);
+  clearMcWrong(activeDeck);
+  updateTop();
 });
 
-// ---------- PWA Status ----------
-function initPwaStatus(){
-  if(!("serviceWorker" in navigator)){
-    el.pwaStatus.textContent = uiLang==="th" ? "ไม่รองรับ" : "nicht verfügbar";
-    return;
-  }
-  el.pwaStatus.textContent = uiLang==="th" ? "พร้อม" : "bereit";
-}
+// PWA status
+if(!("serviceWorker" in navigator)) el.pwaStatus.textContent = uiLang==="th" ? "ไม่รองรับ" : "nicht verfügbar";
+else el.pwaStatus.textContent = uiLang==="th" ? "bereit" : "bereit";
 
-// ---------- Toast (minimal) ----------
-let toastTimer = null;
-function toast(msg){
-  clearTimeout(toastTimer);
-  el.sub.textContent = msg;
-  toastTimer = setTimeout(()=>{ if(el.train.value==="cards") el.sub.textContent=""; }, 2500);
-}
+window.addEventListener("online", updateTop);
+window.addEventListener("offline", updateTop);
 
-function bumpCacheAndReloadHint(){
-  // Hinweis: beim CSV Import braucht es keinen SW cache.
-  // Diese Funktion bleibt als Platzhalter fuer spaetere Cache-Versionen.
-}
-
-// ---------- Init ----------
-async function init(){
-  applyI18n();
-  initPwaStatus();
-
-  // Load decks
-  loadCustomFromStorage();
-
-  // Fetch A1/Alltag lists (same repo)
-  try{
-    decks.a1 = await fetchCsv("./thai_cards_A1_200.csv");
-  }catch(e){ console.warn("A1 CSV missing"); decks.a1 = []; }
-  try{
-    decks.alltag = await fetchCsv("./thai_cards_alltag_200.csv");
-  }catch(e){ console.warn("Alltag CSV missing"); decks.alltag = []; }
-
-  // Default deck
-  el.deck.value = activeDeck;
-  setDeck(activeDeck);
-
-  window.addEventListener("online", updateTop);
-  window.addEventListener("offline", updateTop);
-}
-
-init();
+// Init
+(async function init(){
+  loadCustom();
+  decks.a1 = await fetchCsv("./thai_cards_A1_200.csv");
+  decks.alltag = await fetchCsv("./thai_cards_alltag_200.csv");
+  rebuildCurrentList();
+  pickNext(true);
+  updateTop();
+})();
