@@ -1,5 +1,5 @@
 // Thai Lernkarten – kompletter Build (2026-02-06)
-const VERSION = "2026-02-06-wronglist-3";
+const VERSION = "2026-02-06-wronglist-4";
 
 // Storage
 const K_UI_LANG = "thai_cards_ui_lang";
@@ -86,6 +86,7 @@ const el = {
   ver: $("ver"),
   wrongList: $("wrongList"),
   learnWrong: $("learnWrong"),
+  learnWrongMC: $("learnWrongMC"),
   clearWrong: $("clearWrong")
 };
 
@@ -162,7 +163,8 @@ function updateWrongPanel(){
   const wrong = getMcWrong(activeDeck);
   const seen=new Set(); const unique=[];
   for(const e of wrong){ if(!e.id) continue; if(seen.has(e.id)) continue; seen.add(e.id); unique.push(e); if(unique.length>=40) break; }
-  el.learnWrong.textContent = studyWrongOnly ? (uiLang==="th" ? "กลับไปเรียนปกติ" : "Zurück zum normalen Lernen") : (uiLang==="th" ? "เรียนเฉพาะที่ตอบผิด" : "Nur falsche MC lernen");
+  el.learnWrong.textContent = studyWrongOnly ? (uiLang==="th" ? "กลับไปเรียนปกติ" : "Zurück zum normalen Lernen") : (uiLang==="th" ? "เรียนเฉพาะที่ตอบผิด" : "Nur falsche lernen");
+  if(el.learnWrongMC){ el.learnWrongMC.textContent = (uiLang==="th" ? "ฝึกแบบปรนัย (เฉพาะผิด)" : "Falsche als Multiple-Choice"); }
   el.clearWrong.textContent = uiLang==="th" ? "ลบรายการผิด" : "Falsche Liste leeren";
 
   if(unique.length===0){
@@ -194,7 +196,7 @@ function updateWrongPanel(){
 }
 
 function updateTop(){
-  el.deckPill.textContent = deckLabel(activeDeck);
+  el.deckPill.textContent = deckLabel(activeDeck) + (studyWrongOnly ? (uiLang==="th" ? " – เฉพาะที่ตอบผิด" : " – nur falsche") : "");
   el.netPill.textContent = navigator.onLine ? (uiLang==="th" ? "ออนไลน์" : "online") : (uiLang==="th" ? "ออฟไลน์" : "offline");
 
   const due = countDue(currentList);
@@ -205,7 +207,7 @@ function updateTop(){
   const mcPart = (uiLang==="th" ? " | ปรนัย ถูก/ผิด: " : " | Multiple-Choice richtig/falsch: ") + s.correct + " / " + wrong;
 
   el.statsPill.textContent = base + mcPart;
-  el.deckInfo.textContent = activeDeck + " (" + currentList.length + ")" + (studyWrongOnly ? " [WRONG]" : "");
+  el.deckInfo.textContent = activeDeck + " (" + currentList.length + ")" + (studyWrongOnly ? (uiLang==="th" ? " [WRONG-ONLY]" : " [NUR FALSCHE]") : "");
 
   updateWrongPanel();
 }
@@ -314,6 +316,11 @@ el.sub.addEventListener("click", (e)=>{
   if(ok) st.correct += 1;
   saveMcStats();
 
+  // Wenn richtig beantwortet, aus der "falsch"-Liste entfernen (macht Liste kleiner)
+  if(ok){
+    removeMcWrongId(activeDeck, wordId(current));
+  }
+
   const green="#047857", red="#b91c1c";
   btn.style.background = ok ? green : red;
   btn.style.borderColor = ok ? green : red;
@@ -340,7 +347,16 @@ el.sub.addEventListener("click", (e)=>{
     }
   }
 
-  updateTop();
+  // Wenn wir nur falsche lernen und jetzt leer sind, automatisch zurueckschalten
+  if(studyWrongOnly){
+    rebuildCurrentList();
+    if(!currentList.length){
+      studyWrongOnly = false;
+      localStorage.setItem(K_STUDY_WRONG_ONLY, "0");
+      rebuildCurrentList();
+    }
+    updateTop();
+  }
 
   setTimeout(()=>{
     mcLocked = false;
@@ -418,7 +434,6 @@ el.clearCustom.addEventListener("click", ()=>{
 // Wrong list controls
 el.clearWrong.addEventListener("click", ()=>{
   clearMcWrong(activeDeck);
-  // Wenn "nur falsche" aktiv ist, zurueckschalten, sonst sind keine Woerter mehr da
   if(studyWrongOnly){
     studyWrongOnly = false;
     localStorage.setItem(K_STUDY_WRONG_ONLY, "0");
@@ -431,6 +446,14 @@ el.clearWrong.addEventListener("click", ()=>{
 el.learnWrong.addEventListener("click", ()=>{
   studyWrongOnly = !studyWrongOnly;
   localStorage.setItem(K_STUDY_WRONG_ONLY, studyWrongOnly ? "1" : "0");
+  rebuildCurrentList(); pickNext(true); updateTop();
+});
+
+el.learnWrongMC?.addEventListener("click", ()=>{
+  // Aktiviert Filter und schaltet auf Multiple-Choice
+  studyWrongOnly = true;
+  localStorage.setItem(K_STUDY_WRONG_ONLY, "1");
+  el.train.value = "mc";
   rebuildCurrentList(); pickNext(true); updateTop();
 });
 
